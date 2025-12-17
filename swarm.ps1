@@ -1,6 +1,10 @@
+# NOTE: I'm too stupid (or PowerShell is too stupid) to source env variables from a file.
+#
+# Also, this script in itself is also stupid due to the fact you'd need to restart Windows,
+# run this script again, manually start Docker in order for it to be succeed.
+
 $SwarmToken = ""
 $ManagerIp  = "" 
-# ----------------------------------------
 
 $ErrorActionPreference = "Stop"
 
