@@ -29,14 +29,16 @@ services:
     deploy:
       mode: replicated
       replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
 
   jobe:
     image: nhansp/jobeinabox:latest
     networks:
       - jobe_net
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: global
       resources:
         limits:
           memory: 3G
