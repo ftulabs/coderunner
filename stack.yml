@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  lb:
+    image: haproxy:2.8
+    ports:
+      - 80:80
+    deploy:
+      mode: global
+    networks:
+      - jobe_net
+    configs:
+      - source: haproxy_cfg
+        target: /usr/local/etc/haproxy/haproxy.cfg
+
+  tunnel:
+    image: snowdreamtech/frpc:latest
+    configs:
+      - source: frpc_cfg_2
+        target: /etc/frp/frpc.toml
+    networks:
+      - jobe_net
+    deploy:
+      mode: replicated
+      replicas: 1
+
+  jobe:
+    image: nhansp/jobeinabox:latest
+    networks:
+      - jobe_net
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 3G
+      restart_policy:
+        condition: on-failure
+
+networks:
+  jobe_net:
+    driver: overlay
+
+configs:
+  haproxy_cfg:
+    external: true
+  frpc_cfg_2:
+    external: true

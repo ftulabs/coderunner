@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+# 1. Cluster Management
+sudo ufw allow 2377/tcp
+
+# 2. Node Communication
+sudo ufw allow 7946/tcp
+sudo ufw allow 7946/udp
+
+# 3. Overlay Network - CRITICAL
+sudo ufw allow 4789/udp
+
+# 4. Application Ports
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+
+# 5. Enable and Reload
+# sudo ufw enable
+# sudo ufw reload

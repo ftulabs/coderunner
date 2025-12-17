@@ -1,0 +1,130 @@
+#!/bin/bash
+
+set -e
+
+# Colors for output
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+log() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+./allow-ports
+
+# 0. Check for .env
+if [ -f ./.env ]; then
+    . .env
+    if [ ${SWARM_MANAGER_IP} == "" ] || [ ${SWARM_JOIN_TOKEN} == "" ]; then
+        error "Please specify SWARM_MANAGER_IP and SWARM_JOIN_TOKEN in .env"
+        exit 1
+    fi
+else
+    error "No .env file found in the current folder."
+    exit 1
+fi
+
+# 1. Check for Root
+if [ "$EUID" -ne 0 ]; then
+    error "Please run this script as root (use sudo)"
+    exit 1
+fi
+
+# 2. Detect OS
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    OS=$ID
+else
+    error "Cannot detect OS. /etc/os-release is missing."
+    exit 1
+fi
+
+log "Detected OS: $OS"
+
+# 3. Installation Logic
+if ! command -v docker &> /dev/null; then
+case $OS in
+    ubuntu|debian|pop|linuxmint)
+        log "Starting Ubuntu/Debian installation..."
+
+        # Remove old versions just in case
+        apt-get remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
+
+        # Install prerequisites
+        log "Installing prerequisites..."
+        apt-get update
+        apt-get install -y ca-certificates curl gnupg
+
+        # Add Docker's official GPG key
+        log "Adding Docker GPG key..."
+        install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg --yes
+        chmod a+r /etc/apt/keyrings/docker.gpg
+
+        # Set up the repository
+        log "Adding Docker repository..."
+        echo \
+          "deb [arch=\"$(dpkg --print-architecture)\" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+          $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+          tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+        # Install Docker Engine
+        log "Installing Docker packages..."
+        apt-get update
+        apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        ;;
+
+    arch|manjaro|endeavouros)
+        log "Starting Arch Linux installation..."
+
+        # Sync databases and update system (recommended before install)
+        log "Syncing pacman databases..."
+        pacman -Sy
+
+        # Install Docker
+        log "Installing Docker package..."
+        pacman -S --noconfirm docker docker-compose
+        ;;
+
+    *)
+        error "Unsupported distribution: $OS"
+        exit 1
+        ;;
+esac
+fi
+
+# 4. Start and Enable Service
+log "Enabling and starting Docker service..."
+systemctl enable --now docker
+
+# 5. Add User to Docker Group (Rootless usage)
+# Identify the user who ran sudo
+REAL_USER=${SUDO_USER:-$USER}
+
+if [ "$REAL_USER" != "root" ]; then
+    log "Adding user '$REAL_USER' to the docker group..."
+    usermod -aG docker "$REAL_USER"
+    success "Docker installed successfully!"
+    echo -e "${GREEN}IMPORTANT:${NC} You must log out and log back in for group changes to take effect."
+    echo -e "Alternatively, run: ${BLUE}newgrp docker${NC}"
+else
+    success "Docker installed successfully as root."
+fi
+
+# 6. Verification
+log "Verifying installation..."
+docker --version
+
+# 7. Join the swarm
+log "Joining the swarm as worker..."
+docker swarm join --token ${SWARM_JOIN_TOKEN} ${SWARM_MANAGER_IP}:2377
