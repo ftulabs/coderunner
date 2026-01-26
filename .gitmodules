@@ -1,0 +1,3 @@
+[submodule "jobeinabox"]
+	path = jobeinabox
+	url = https://github.com/ftulabs/jobeinabox
