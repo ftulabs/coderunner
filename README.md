@@ -1,3 +1,7 @@
+**This repository is deprecated. A fully rewritten repository of all services can be found at [https://github.com/ftulabs/moodle-coderunner](https://github.com/ftulabs/moodle-coderunner).**
+
+---
+
 # Insanely stupid scripts to install Docker, join a Docker Swarm, and configure as a node to run [jobeinabox](https://github.com/trampgeek/jobeinabox) for Moodle CodeRunner's plugin.
 
 [![](https://badgen.net/docker/pulls/nhansp/jobeinabox)](https://hub.docker.com/r/nhansp/jobeinabox/) [![](https://badgen.net/docker/size/nhansp/jobeinabox/latest/amd64)](https://hub.docker.com/r/nhansp/jobeinabox/)
